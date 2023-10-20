@@ -1,0 +1,57 @@
+version: '3'
+services:
+    mysql:
+        container_name: payment_service_mysql
+        build:
+            context: .
+            dockerfile: ./docker/mariadb/Dockerfile
+            args:
+                USER_ID: ${USER_ID:-0}
+                GROUP_ID: ${GROUP_ID:-0}
+        ports:
+            - "3306:3306"
+        volumes:
+         - ./etc/mysql:/etc/mysql
+         - ./logs/mysql:/var/log/mysql
+         - ./docker/mariadb/db_data:/docker-entrypoint-initdb.d/
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: payments
+            MYSQL_USER: user
+            MYSQL_PASSWORD: user
+        networks:
+          - payment-service-network
+    php:
+        container_name: payment_service_php
+        build:
+            context: .
+            dockerfile: ./docker/php/Dockerfile
+            args:
+                USER_ID: ${USER_ID:-0}
+                GROUP_ID: ${GROUP_ID:-0}
+        volumes:
+            - .:/var/www
+            - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+        networks:
+          - payment-service-network
+    nginx:
+        container_name: payment_service_nginx
+        build:
+            context: .
+            dockerfile: ./docker/nginx/Dockerfile
+            args:
+                USER_ID: ${USER_ID:-0}
+                GROUP_ID: ${GROUP_ID:-0}
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./docker/nginx/hosts:/etc/nginx/conf.d
+            - .:/var/www
+            - ./logs/nginx:/var/log/nginx
+        networks:
+          - payment-service-network
+
+networks:
+  payment-service-network:
+    driver: bridge
